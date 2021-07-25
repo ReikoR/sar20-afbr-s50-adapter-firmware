@@ -17,6 +17,7 @@
 #include "driver/s2pi.h"
 #include "driver/uart.h"
 #include "driver/timer.h"
+#include "spi.h"
 
 #include "main.h"
 
@@ -43,6 +44,9 @@
 
 /*! Global raw data variable. */
 static volatile void *myData = 0;
+
+volatile bool isTriggered = false;
+volatile uint16_t distance_mm = 0;
 
 /*******************************************************************************
  * Prototypes
@@ -91,6 +95,8 @@ status_t measurement_ready_callback(status_t status, void *data);
 int main(void) {
   /* Initialize the platform hardware including the required peripherals for the API. */
   hardware_init();
+
+  HAL_SPI_Transmit_DMA(&hspi2, (uint8_t *)&distance_mm, 1);
 
   /* The API module handle that contains all data definitions that is
    * required within the API module for the corresponding hardware device.
@@ -211,39 +217,46 @@ int main(void) {
      * right now. The function returns with status #STATUS_ARGUS_POWERLIMIT and
      * the function must be called again later. Use the frame time configuration
      * in order to adjust the timing between two measurement frames. */
-    status = Argus_TriggerMeasurement(hnd, measurement_ready_callback);
-    if (status == STATUS_ARGUS_POWERLIMIT) {
-      /* Not ready (due to laser safety) to restart the measurement yet.
-       * Come back later. */
-      __asm("nop");
-    } else if (status != STATUS_OK) {
-      /* Error Handling ...*/
-    } else {
-      /* Wait until measurement data is ready. */
-      do {
-        status = Argus_GetStatus(hnd);
+    if (isTriggered) {
+      isTriggered = false;
+
+      status = Argus_TriggerMeasurement(hnd, measurement_ready_callback);
+      if (status == STATUS_ARGUS_POWERLIMIT) {
+        /* Not ready (due to laser safety) to restart the measurement yet.
+         * Come back later. */
         __asm("nop");
-      } while (status == STATUS_BUSY);
-
-      if (status != STATUS_OK) {
+      } else if (status != STATUS_OK) {
         /* Error Handling ...*/
-      }
-
-      else {
-        /* The measurement data structure. */
-        argus_results_t res;
-
-        /* Evaluate the raw measurement results. */
-        status = Argus_EvaluateData(hnd, &res, (void*) myData);
+      } else {
+        /* Wait until measurement data is ready. */
+        do {
+          status = Argus_GetStatus(hnd);
+          __asm("nop");
+        } while (status == STATUS_BUSY);
 
         if (status != STATUS_OK) {
           /* Error Handling ...*/
         }
 
         else {
-          /* Use the recent measurement results
-           * (converting the Q9.22 value to float and print or display it). */
-          print("%d\n", res.Bin.Range / (Q9_22_ONE / 1000));
+          /* The measurement data structure. */
+          argus_results_t res;
+
+          /* Evaluate the raw measurement results. */
+          status = Argus_EvaluateData(hnd, &res, (void*) myData);
+
+          if (status != STATUS_OK) {
+            /* Error Handling ...*/
+          }
+
+          else {
+            /* Use the recent measurement results
+             * (converting the Q9.22 value to float and print or display it). */
+            distance_mm = res.Bin.Range / (Q9_22_ONE / 1000);
+            print("%d\n", distance_mm);
+            HAL_GPIO_WritePin(DONE_GPIO_Port, DONE_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(DONE_GPIO_Port, DONE_Pin, GPIO_PIN_SET);
+          }
         }
       }
     }
@@ -271,6 +284,8 @@ static void hardware_init(void) {
 
   /* Initialize the S2PI hardware required by the API. */
   S2PI_Init(SPI_SLAVE, SPI_BAUD_RATE);
+
+  MX_SPI2_Init();
 }
 
 status_t measurement_ready_callback(status_t status, void *data) {
@@ -287,4 +302,10 @@ status_t measurement_ready_callback(status_t status, void *data) {
     myData = data;
   }
   return status;
+}
+
+void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin) {
+  if (GPIO_Pin == TRIG_Pin) {
+    isTriggered = true;
+  }
 }

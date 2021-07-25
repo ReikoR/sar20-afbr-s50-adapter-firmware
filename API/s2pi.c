@@ -410,7 +410,9 @@ static inline status_t S2PI_CompleteTransfer(status_t status) {
  * @retval None
  */
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) {
-  S2PI_CompleteTransfer(STATUS_OK);
+  if (hspi == &hspi1) {
+    S2PI_CompleteTransfer(STATUS_OK);
+  }
 }
 
 /**
@@ -438,11 +440,13 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) {
    * starts it right from the interrupt callback function.
    * In order to overcome the feature, the invocation of the API callback is scheduled to whatever IRQ
    * comes last: */
-  if (hspi->hdmatx->Lock == HAL_UNLOCKED) /* TX Interrupt already received */
-    HAL_SPI_TxCpltCallback(hspi);
-  else
-    /* There is still the TX DMA Interrupt we have to wait for */
-    hspi->hdmatx->XferCpltCallback = SPI_DMATransmitReceiveCpltDelayed;
+  if (hspi == &hspi1) {
+    if (hspi->hdmatx->Lock == HAL_UNLOCKED) /* TX Interrupt already received */
+      HAL_SPI_TxCpltCallback(hspi);
+    else
+      /* There is still the TX DMA Interrupt we have to wait for */
+      hspi->hdmatx->XferCpltCallback = SPI_DMATransmitReceiveCpltDelayed;
+  }
 }
 
 /*!***************************************************************************
@@ -473,7 +477,9 @@ status_t S2PI_Abort(void) {
  * @retval None
  */
 void HAL_SPI_AbortCpltCallback(SPI_HandleTypeDef *hspi) {
-  S2PI_CompleteTransfer(ERROR_ABORTED);
+  if (hspi == &hspi1) {
+    S2PI_CompleteTransfer(ERROR_ABORTED);
+  }
 }
 
 /**
@@ -483,7 +489,9 @@ void HAL_SPI_AbortCpltCallback(SPI_HandleTypeDef *hspi) {
  * @retval None
  */
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
-  S2PI_CompleteTransfer(ERROR_FAIL);
+  if (hspi == &hspi1) {
+    S2PI_CompleteTransfer(ERROR_FAIL);
+  }
 }
 
 /*!***************************************************************************
