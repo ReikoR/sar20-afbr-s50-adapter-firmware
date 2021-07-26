@@ -74,7 +74,7 @@ void HAL_MspInit(void)
 
   /** Disable the internal Pull-Up in Dead Battery pins of UCPD peripheral
   */
-  HAL_SYSCFG_StrobeDBattpinsConfig(SYSCFG_CFGR1_UCPD1_STROBE | SYSCFG_CFGR1_UCPD2_STROBE);
+  HAL_SYSCFG_StrobeDBattpinsConfig(SYSCFG_CFGR1_UCPD1_STROBE);
 
   /* USER CODE BEGIN MspInit 1 */
 
