@@ -108,7 +108,7 @@ int main(void) {
     /* Error Handling ...*/
   }
 
-  HAL_Delay(100);
+  HAL_Delay(200);
 
   /* Initialize the API with default values.
    * This implicitly calls the initialization functions
@@ -152,7 +152,7 @@ int main(void) {
 
   /* Adjust some configuration parameters by invoking the dedicated API methods. */
   //Argus_SetConfigurationFrameTime( hnd, 100000 ); // 0.1 second = 10 Hz
-  Argus_SetConfigurationFrameTime(hnd, 10000); // 0.01 second = 100 Hz
+  Argus_SetConfigurationFrameTime(hnd, 5000); // 0.005 second = 200 Hz
   Argus_SetConfigurationDFMMode(hnd, ARGUS_MODE_B, DFM_MODE_OFF); // No dual frequency
   Argus_SetConfigurationMeasurementMode(hnd, ARGUS_MODE_B); // Short range mode
 
